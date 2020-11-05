@@ -12,7 +12,10 @@ homepage = "https://github.com/oltoko/pixelflut.rs"
 repository = "https://github.com/oltoko/pixelflut.rs"
 keywords = ["pixelflut"]
 
+[dev-dependencies]
+tokio = { version = "0.3", features = ["macros"] }
+
 [dependencies]
-tokio = { version = "0.3", features = ["rt", "io-util", "net", "sync"] }
+tokio = { version = "0.3", features = ["rt-multi-thread", "io-util", "net", "sync"] }
 custom_error = "1.8"
 log = { version = "0.4" }

@@ -1,5 +1,6 @@
 use crate::pixel::Pixel;
 
+#[derive(Clone)]
 pub struct Size {
     x: u32,
     y: u32,
