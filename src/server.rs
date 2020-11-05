@@ -1,15 +1,17 @@
+use core::fmt;
+use std::fmt::Formatter;
 use std::net::IpAddr;
 
-use crate::grid::{Grid, Size};
-use crate::pixel::Pixel;
-use core::fmt;
 use custom_error::custom_error;
-use std::fmt::Formatter;
+use log::{error, info};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::task;
+
+use crate::grid::{Grid, Size};
+use crate::pixel::Pixel;
 
 custom_error! { CommError
     WrongCommand = "Wrong command send!"
@@ -48,18 +50,19 @@ where
             }
         });
 
+        info!("Server is ready and listening to {}:{}", self.interface, self.port);
         loop {
             match listener.accept().await {
                 // The second item contains the IP and port of the new connection.
                 Ok((mut socket, addr)) => {
-                    println!("New connection from {}", addr);
+                    info!("New connection from {}", addr);
                     let size = size.clone();
                     let txpx = tx.clone();
                     task::spawn(async move {
                         let _ = process(&mut socket, size, txpx).await;
                     });
                 }
-                Err(e) => eprintln!("Error opening socket connection: {}", e),
+                Err(e) => error!("Error opening socket connection: {}", e),
             };
         }
     }
