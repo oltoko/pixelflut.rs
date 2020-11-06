@@ -3,7 +3,7 @@ use std::fmt::Formatter;
 use std::net::IpAddr;
 
 use custom_error::custom_error;
-use log::{error, info};
+use log::{error, info, warn};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -12,6 +12,13 @@ use tokio::task;
 
 use crate::grid::{Grid, Size};
 use crate::pixel::Pixel;
+
+const HELP: &str = "\
+HELP Pixelflut Commands:\n\
+HELP - PX <x> <y> <RRGGBB[AA]>\n\
+HELP - PX <x> <y>   >>  PX <x> <y> <RRGGBB>\n\
+HELP - SIZE         >>  SIZE <width> <height>\n\
+HELP - HELP         >>  HELP ...\n";
 
 custom_error! { CommError
     WrongCommand = "Wrong command send!"
@@ -24,8 +31,8 @@ pub struct Server<G: Grid + std::marker::Send> {
 }
 
 impl<G> Server<G>
-where
-    G: 'static + Grid + std::marker::Send,
+    where
+        G: 'static + Grid + std::marker::Send,
 {
     pub fn new(interface: IpAddr, port: u16, grid: G) -> Server<G> {
         Server {
@@ -59,7 +66,10 @@ where
                     let size = size.clone();
                     let txpx = tx.clone();
                     task::spawn(async move {
-                        let _ = process(&mut socket, size, txpx).await;
+                        match process(&mut socket, size, txpx).await {
+                            Ok(()) => info!("{} disconnects", addr),
+                            Err(e) => warn!("{} disconnects because of: {}", addr, e),
+                        }
                     });
                 }
                 Err(e) => error!("Error opening socket connection: {}", e),
@@ -76,15 +86,14 @@ async fn process(
     let (rd, mut wr) = io::split(socket);
     let reader = BufReader::new(rd);
     let mut lines = reader.lines();
+
     while let Some(line) = lines.next_line().await? {
         match line {
             cmd if cmd.starts_with("PX ") => txpx.send(cmd.parse()?).await?,
-            cmd if cmd.starts_with("SIZE") => {
-                wr.write(size.as_bytes()).await?;
-                return Ok(());
-            }
+            cmd if cmd.starts_with("SIZE") => { wr.write(size.as_bytes()).await?; }
+            cmd if cmd.starts_with("HELP") => { wr.write(HELP.as_bytes()).await?; }
             _ => return Err(Box::new(CommError::WrongCommand)),
-        }
+        };
     }
 
     Ok(())
