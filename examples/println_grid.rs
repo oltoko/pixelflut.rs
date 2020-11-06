@@ -1,9 +1,13 @@
-use pixelflut_rs::grid::{Size, Grid};
+use simple_logger::SimpleLogger;
+
+use pixelflut_rs::grid::{Grid, Size};
 use pixelflut_rs::pixel::Pixel;
 use pixelflut_rs::server::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
+
+    SimpleLogger::new().init().unwrap();
 
     let grid = PrintlnGrid {
         size: Size::new(1024, 768),

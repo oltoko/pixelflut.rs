@@ -14,6 +14,7 @@ keywords = ["pixelflut"]
 
 [dev-dependencies]
 tokio = { version = "0.3", features = ["macros"] }
+simple_logger = "1.11"
 
 [dependencies]
 tokio = { version = "0.3", features = ["rt-multi-thread", "io-util", "net", "sync"] }
