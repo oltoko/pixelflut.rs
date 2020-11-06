@@ -20,8 +20,8 @@ HELP - PX <x> <y>   >>  PX <x> <y> <RRGGBB>\n\
 HELP - SIZE         >>  SIZE <width> <height>\n\
 HELP - HELP         >>  HELP ...\n";
 
-custom_error! { CommError
-    WrongCommand = "Wrong command send!"
+custom_error! { ServerError
+    UnknownCommand = "Unknown command send!"
 }
 
 pub struct Server<G: Grid + std::marker::Send> {
@@ -88,12 +88,20 @@ async fn process(
     let mut lines = reader.lines();
 
     while let Some(line) = lines.next_line().await? {
-        match line {
-            cmd if cmd.starts_with("PX ") => txpx.send(cmd.parse()?).await?,
-            cmd if cmd.starts_with("SIZE") => { wr.write(size.as_bytes()).await?; }
-            cmd if cmd.starts_with("HELP") => { wr.write(HELP.as_bytes()).await?; }
-            _ => return Err(Box::new(CommError::WrongCommand)),
-        };
+
+        let mut parts = line.split_whitespace();
+        match parts.next() {
+            Some("PX") => {
+                match parts.count() {
+                    // 2 => todo implement the pixel color request,
+                    3 => txpx.send(line.parse()?).await?,
+                    _ => return Err(Box::new(ServerError::UnknownCommand)),
+                }
+            },
+            Some("SIZE") => { wr.write(size.as_bytes()).await?; },
+            Some("HELP") => { wr.write(HELP.as_bytes()).await?; }
+            _ => return Err(Box::new(ServerError::UnknownCommand)),
+        }
     }
 
     Ok(())
@@ -102,7 +110,7 @@ async fn process(
 impl fmt::Display for Size {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let xy = self.xy();
-        write!(f, "SIZE {} {}\n", xy.0, xy.1)
+        writeln!(f, "SIZE {} {}", xy.0, xy.1)
     }
 }
 
