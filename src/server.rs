@@ -16,7 +16,6 @@ use crate::pixel::Pixel;
 const HELP: &str = "\
 HELP Pixelflut Commands:\n\
 HELP - PX <x> <y> <RRGGBB[AA]>\n\
-HELP - PX <x> <y>   >>  PX <x> <y> <RRGGBB>\n\
 HELP - SIZE         >>  SIZE <width> <height>\n\
 HELP - HELP         >>  HELP ...\n";
 
@@ -91,13 +90,7 @@ async fn process(
 
         let mut parts = line.split_whitespace();
         match parts.next() {
-            Some("PX") => {
-                match parts.count() {
-                    // 2 => todo implement the pixel color request,
-                    3 => txpx.send(line.parse()?).await?,
-                    _ => return Err(Box::new(ServerError::UnknownCommand)),
-                }
-            },
+            Some("PX") => txpx.send(line.parse()?).await?,
             Some("SIZE") => { wr.write(size.as_bytes()).await?; },
             Some("HELP") => { wr.write(HELP.as_bytes()).await?; }
             _ => return Err(Box::new(ServerError::UnknownCommand)),
