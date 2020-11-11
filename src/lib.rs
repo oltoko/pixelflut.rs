@@ -29,8 +29,8 @@
 ///         println!("{}", px);
 ///     }
 ///
-///     fn fetch(&self, p: Coordinate) -> Pixel {
-///         "PX 1024 768 ff0f00".parse().unwrap()
+///     fn fetch(&self, p: Coordinate) -> Option<Pixel> {
+///         Some("PX 1024 768 ff0f00".parse().unwrap())
 ///     }
 /// }
 /// ```
@@ -69,8 +69,8 @@
 /// #         println!("{}", px);
 /// #     }
 ///
-/// #     fn fetch(&self, p: Coordinate) -> Pixel {
-/// #         "PX 1024 768 ff0f00".parse().unwrap()
+/// #     fn fetch(&self, p: Coordinate) -> Option<Pixel> {
+/// #         Some("PX 1024 768 ff0f00".parse().unwrap())
 /// #     }
 /// # }
 /// ```
