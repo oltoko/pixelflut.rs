@@ -1,4 +1,4 @@
-![main](https://github.com/oltoko/pixelflut.rs/workflows/main/badge.svg)
+[![main](https://github.com/oltoko/pixelflut.rs/workflows/main/badge.svg)](https://github.com/oltoko/pixelflut.rs/actions?query=workflow%3Amain)
 
 # pixelflut.rs
 A library providing a Pixelflut server to easily connect your display or whatever to it. 
