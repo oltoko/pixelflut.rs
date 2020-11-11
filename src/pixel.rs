@@ -35,8 +35,8 @@ impl Pixel {
     }
 
     /// Returns the Color of this Pixel.
-    pub fn color(&self) -> &Color {
-        &self.color
+    pub fn color(&self) -> Color {
+        self.color
     }
 }
 
@@ -91,23 +91,23 @@ custom_error! {#[derive(PartialEq)] pub ParsePixelError
 /// ```
 #[derive(Copy, Clone, PartialEq, Hash, Debug)]
 pub struct Coordinate {
-    x: u32,
-    y: u32,
+    x: usize,
+    y: usize,
 }
 
 impl Coordinate {
     /// Creates a new Coordinate for the given x and y values.
-    pub fn new(x: u32, y: u32) -> Coordinate {
+    pub fn new(x: usize, y: usize) -> Coordinate {
         Coordinate { x, y }
     }
 
     /// Returns the x value of this Coordinate.
-    pub fn x(&self) -> u32 {
+    pub fn x(&self) -> usize {
         self.x
     }
 
     /// Returns the y value of this Coordinate.
-    pub fn y(&self) -> u32 {
+    pub fn y(&self) -> usize {
         self.y
     }
 }
