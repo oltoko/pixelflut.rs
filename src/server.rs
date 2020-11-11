@@ -1,17 +1,15 @@
 use core::fmt;
 use std::fmt::Formatter;
 use std::net::IpAddr;
+use std::sync::{Arc, Mutex};
 
 use custom_error::custom_error;
 use log::{error, info, warn};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
 use tokio::task;
 
 use crate::grid::{Grid, Size};
-use crate::pixel::Pixel;
 
 const HELP: &str = "\
 HELP Pixelflut Commands:\n\
@@ -26,7 +24,7 @@ custom_error! { ServerError
 pub struct Server<G: Grid + std::marker::Send> {
     interface: IpAddr,
     port: u16,
-    grid: G,
+    grid: Arc<Mutex<G>>,
 }
 
 impl<G> Server<G>
@@ -37,7 +35,7 @@ impl<G> Server<G>
         Server {
             interface,
             port,
-            grid,
+            grid: Arc::new(Mutex::new(grid)),
         }
     }
 
@@ -46,26 +44,15 @@ impl<G> Server<G>
         // Bind the listener to the address
         let listener = TcpListener::bind((self.interface, self.port)).await?;
 
-        let size = self.grid.size().to_string();
-
-        let (tx, mut rx) = mpsc::channel(32);
-        let grid = self.grid;
-        task::spawn(async move {
-            while let Some(px) = rx.recv().await {
-                grid.draw(px);
-            }
-        });
-
         info!("Server is ready and listening to {}:{}", self.interface, self.port);
         loop {
             match listener.accept().await {
                 // The second item contains the IP and port of the new connection.
                 Ok((mut socket, addr)) => {
                     info!("New connection from {}", addr);
-                    let size = size.clone();
-                    let txpx = tx.clone();
+                    let grid = Arc::clone(&self.grid);
                     task::spawn(async move {
-                        match process(&mut socket, size, txpx).await {
+                        match process(&mut socket, grid).await {
                             Ok(()) => info!("{} disconnects", addr),
                             Err(e) => warn!("{} disconnects because of: {}", addr, e),
                         }
@@ -77,21 +64,29 @@ impl<G> Server<G>
     }
 }
 
-async fn process(
+async fn process<G: Grid>(
     socket: &mut TcpStream,
-    size: String,
-    txpx: Sender<Pixel>,
+    grid: Arc<Mutex<G>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (rd, mut wr) = io::split(socket);
     let reader = BufReader::new(rd);
     let mut lines = reader.lines();
 
     while let Some(line) = lines.next_line().await? {
-
         let mut parts = line.split_whitespace();
         match parts.next() {
-            Some("PX") => txpx.send(line.parse()?).await?,
-            Some("SIZE") => { wr.write(size.as_bytes()).await?; },
+            Some("PX") => {
+                let grid = grid.lock().unwrap();
+                grid.draw(line.parse()?)
+            },
+            Some("SIZE") => {
+                let size;
+                {
+                    let grid = grid.lock().unwrap();
+                    size = grid.size().to_string();
+                }
+                wr.write(size.as_bytes()).await?;
+            },
             Some("HELP") => { wr.write(HELP.as_bytes()).await?; }
             _ => return Err(Box::new(ServerError::UnknownCommand)),
         }
