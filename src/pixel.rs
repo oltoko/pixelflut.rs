@@ -13,8 +13,7 @@ use custom_error::custom_error;
 ///
 /// # Example
 /// ```
-/// use pixelflut_rs::pixel::{Pixel, Coordinate, Color};
-///
+/// # use pixelflut_rs::pixel::{Pixel, Coordinate, Color};
 /// let pixel: Pixel = "PX 1024 768 ff0f00".parse().unwrap();
 /// assert_eq!(pixel, Pixel::new(Coordinate::new(1024, 768), Color::rgb(0xff, 0x0f, 0x00)));
 /// ```
@@ -86,8 +85,7 @@ custom_error! {#[derive(PartialEq)] pub ParsePixelError
 ///
 /// # Example
 /// ```
-/// use pixelflut_rs::pixel::Coordinate;
-///
+/// # use pixelflut_rs::pixel::Coordinate;
 /// let coord: Coordinate = "PX 1024 768".parse().unwrap();
 /// assert_eq!(coord, Coordinate::new(1024, 768));
 /// ```
@@ -151,6 +149,25 @@ custom_error! {#[derive(PartialEq)] pub ParseCoordinateError
     WrongFormat            = "the string has the wrong format"
 }
 
+/// The Color which is used for a Pixel.
+///
+/// You can create a Color as normal RGB or add an alpha channel to it.
+///
+/// # Example
+/// ## RGB Color
+/// ```
+/// # use pixelflut_rs::pixel::Color;
+/// let color: Color = "ff0f00".parse().unwrap();
+/// assert_eq!(color, Color::rgb(0xff, 0x0f, 0x00));
+/// assert!(color.is_rgb())
+/// ```
+/// ### RGBA Color
+/// ```
+/// # use pixelflut_rs::pixel::Color;
+/// let color: Color = "ff0f00aa".parse().unwrap();
+/// assert_eq!(color, Color::rgba(0xff, 0x0f, 0x00, 0xaa));
+/// assert!(color.is_rgba())
+/// ```
 #[derive(Copy, Clone, PartialEq, Hash, Debug)]
 pub struct Color {
     r: u8,
@@ -163,7 +180,7 @@ impl Color {
     /// Creates a new Color without an alpha channel.
     ///
     /// ```
-    /// use pixelflut_rs::pixel::Color;
+    /// # use pixelflut_rs::pixel::Color;
     /// let color = Color::rgb(0xff, 0x0f, 0x00);
     /// assert!(color.is_rgb());
     /// assert!(!color.is_rgba());
@@ -175,7 +192,7 @@ impl Color {
     /// Creates a new Color with an alpha channel.
     ///
     /// ```
-    /// use pixelflut_rs::pixel::Color;
+    /// # use pixelflut_rs::pixel::Color;
     /// let color = Color::rgba(0xff, 0x0f, 0x00, 0xaa);
     /// assert!(color.is_rgba());
     /// assert!(!color.is_rgb());
@@ -192,7 +209,7 @@ impl Color {
     /// Returns the rgb values of this Color.
     ///
     /// ```
-    /// use pixelflut_rs::pixel::Color;
+    /// # use pixelflut_rs::pixel::Color;
     /// assert_eq!((0xff, 0x0f, 0x00), Color::rgb(0xff, 0x0f, 0x00).rgb_values());
     /// ```
     pub fn rgb_values(&self) -> (u8, u8, u8) {
@@ -202,7 +219,7 @@ impl Color {
     /// Returns the rgb and the alpha value of this Color.
     ///
     /// ```
-    /// use pixelflut_rs::pixel::Color;
+    /// # use pixelflut_rs::pixel::Color;
     /// assert_eq!((0xff, 0x0f, 0x00, None), Color::rgb(0xff, 0x0f, 0x00).rgba_values());
     /// assert_eq!((0xff, 0x0f, 0x00, Some(0xaa)), Color::rgba(0xff, 0x0f, 0x00, 0xaa).rgba_values());
     /// ```
@@ -213,7 +230,7 @@ impl Color {
     /// Returns `true` if this Color doesn't have an alpha channel.
     ///
     /// ```
-    /// use pixelflut_rs::pixel::Color;
+    /// # use pixelflut_rs::pixel::Color;
     /// let color = Color::rgb(0xff, 0x0f, 0x00);
     /// assert!(color.is_rgb());
     /// let color = Color::rgba(0xff, 0x0f, 0x00, 0xaa);
@@ -226,7 +243,7 @@ impl Color {
     /// Returns `true` if this Color does have an alpha channel.
     ///
     /// ```
-    /// use pixelflut_rs::pixel::Color;
+    /// # use pixelflut_rs::pixel::Color;
     /// let color = Color::rgb(0xff, 0x0f, 0x00);
     /// assert!(!color.is_rgba());
     /// let color = Color::rgba(0xff, 0x0f, 0x00, 0xaa);
