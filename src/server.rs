@@ -2,16 +2,20 @@ use core::fmt;
 use std::fmt::Formatter;
 use std::net::IpAddr;
 use std::sync::Arc;
+use std::time::Instant;
 
 use custom_error::custom_error;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::RwLock;
+use tokio::sync::{mpsc, RwLock};
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::task;
 
 use crate::grid::{Grid, Size};
 use crate::pixel::Pixel;
+
+const PIXEL_BUFFER: usize = 128;
 
 const HELP: &str = "\
 HELP Pixelflut Commands:\n\
@@ -57,6 +61,12 @@ impl<G> Server<G>
     pub async fn start(self) -> Result<(), Box<dyn std::error::Error>> {
         // Bind the listener to the address
         let listener = TcpListener::bind((self.interface, self.port)).await?;
+        let (tx, rx) = mpsc::channel(PIXEL_BUFFER);
+
+        let write_grid = Arc::clone(&self.grid);
+        task::spawn(async move {
+            draw_pixels(rx, write_grid).await;
+        });
 
         info!("Server is ready and listening to {}:{}", self.interface, self.port);
         loop {
@@ -65,8 +75,9 @@ impl<G> Server<G>
                 Ok((mut socket, addr)) => {
                     info!("New connection from {}", addr);
                     let grid = Arc::clone(&self.grid);
+                    let tx = tx.clone();
                     task::spawn(async move {
-                        match process(&mut socket, grid).await {
+                        match process(&mut socket, grid, tx).await {
                             Ok(()) => info!("{} disconnects", addr),
                             Err(e) => warn!("{} disconnects because of: {}", addr, e),
                         }
@@ -78,9 +89,32 @@ impl<G> Server<G>
     }
 }
 
+async fn draw_pixels<G: Grid>(mut rx: Receiver<Pixel>, grid: Arc<RwLock<G>>) {
+    let buf: &mut Vec<Pixel> = &mut vec!();
+    let mut time = Instant::now();
+
+    loop {
+        match rx.recv().await {
+            Some(px) => buf.push(px),
+            None => (),
+        }
+
+        if buf.len() > 0 && (buf.len() > PIXEL_BUFFER || time.elapsed().as_micros() > 900) {
+            // debug!("Write {} pixels after {} µs!", buf.len(), time.elapsed().as_micros());
+            let mut grid = grid.write().await;
+            for px in buf.iter() {
+                grid.draw(px);
+            }
+            buf.clear();
+            time = Instant::now();
+        }
+    }
+}
+
 async fn process<G: Grid>(
     socket: &mut TcpStream,
     grid: Arc<RwLock<G>>,
+    tx: Sender<Pixel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (rd, mut wr) = io::split(socket);
     let reader = BufReader::new(rd);
@@ -104,8 +138,9 @@ async fn process<G: Grid>(
                     }
                     // PX <x> <y> <RRGGBB[AA]>
                     3 => {
-                        let mut grid = grid.write().await;
-                        grid.draw(line.parse()?)
+                        tx.send(line.parse()?).await?;
+                        // let mut grid = grid.write().await;
+                        // grid.draw(line.parse()?)
                     }
                     _ => return Err(Box::new(ServerError::UnknownCommand)),
                 }

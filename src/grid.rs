@@ -68,7 +68,7 @@ pub trait Grid {
     fn size(&self) -> Size;
 
     /// Draw the given Pixel on the Grid.
-    fn draw(&mut self, px: Pixel);
+    fn draw(&mut self, px: &Pixel);
 
     /// Fetch the current status of the Pixel for the given Coordinates. Returns None if no such
     /// Pixel exists.
