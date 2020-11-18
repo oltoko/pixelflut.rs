@@ -95,12 +95,11 @@ async fn draw_pixels<G: Grid>(mut rx: Receiver<Pixel>, grid: Arc<RwLock<G>>) {
     let mut time = Instant::now();
 
     loop {
-        match rx.recv().await {
-            Some(px) => buf.push(px),
-            None => (),
+        if let Some(px) = rx.recv().await {
+            buf.push(px);
         }
 
-        if buf.len() > 0 && (buf.len() > PIXEL_BUFFER || time.elapsed().as_micros() > 900) {
+        if !buf.is_empty() && (buf.len() > PIXEL_BUFFER || time.elapsed().as_micros() > 900) {
             let mut grid = grid.write().await;
             buf.iter().for_each(|px| grid.draw(px));
             buf.clear();
