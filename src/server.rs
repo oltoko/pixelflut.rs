@@ -43,7 +43,7 @@ impl<G> Server<G>
     where
         G: 'static + Grid + std::marker::Send,
 {
-    /// Creates a new Server which with the given interface, port and Grid.
+    /// Creates a new Server for the given interface, port and Grid.
     pub fn new(interface: IpAddr, port: u16, grid: G) -> Server<G> {
         Server {
             interface,
