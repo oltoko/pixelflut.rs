@@ -63,6 +63,7 @@ impl<G> Server<G>
         let listener = TcpListener::bind((self.interface, self.port)).await?;
         let (tx, rx) = mpsc::channel(PIXEL_BUFFER);
 
+        // Start a dedicated task to draw the pixels in bulks to the grid
         let write_grid = Arc::clone(&self.grid);
         task::spawn(async move {
             draw_pixels(rx, write_grid).await;
@@ -102,9 +103,7 @@ async fn draw_pixels<G: Grid>(mut rx: Receiver<Pixel>, grid: Arc<RwLock<G>>) {
         if buf.len() > 0 && (buf.len() > PIXEL_BUFFER || time.elapsed().as_micros() > 900) {
             // debug!("Write {} pixels after {} µs!", buf.len(), time.elapsed().as_micros());
             let mut grid = grid.write().await;
-            for px in buf.iter() {
-                grid.draw(px);
-            }
+            buf.iter().for_each(|px| grid.draw(px));
             buf.clear();
             time = Instant::now();
         }
