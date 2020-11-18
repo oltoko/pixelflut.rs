@@ -15,7 +15,7 @@ use tokio::task;
 use crate::grid::{Grid, Size};
 use crate::pixel::Pixel;
 
-const PIXEL_BUFFER: usize = 128;
+const PIXEL_BUFFER: usize = 1024;
 
 const HELP: &str = "\
 HELP Pixelflut Commands:\n\
