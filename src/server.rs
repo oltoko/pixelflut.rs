@@ -101,7 +101,6 @@ async fn draw_pixels<G: Grid>(mut rx: Receiver<Pixel>, grid: Arc<RwLock<G>>) {
         }
 
         if buf.len() > 0 && (buf.len() > PIXEL_BUFFER || time.elapsed().as_micros() > 900) {
-            // debug!("Write {} pixels after {} µs!", buf.len(), time.elapsed().as_micros());
             let mut grid = grid.write().await;
             buf.iter().for_each(|px| grid.draw(px));
             buf.clear();
@@ -138,8 +137,6 @@ async fn process<G: Grid>(
                     // PX <x> <y> <RRGGBB[AA]>
                     3 => {
                         tx.send(line.parse()?).await?;
-                        // let mut grid = grid.write().await;
-                        // grid.draw(line.parse()?)
                     }
                     _ => return Err(Box::new(ServerError::UnknownCommand)),
                 }
