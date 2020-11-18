@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use custom_error::custom_error;
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, RwLock};
