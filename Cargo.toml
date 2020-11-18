@@ -1,7 +1,7 @@
 [package]
 name = "pixelflut-rs"
 edition = "2018"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Oliver Koch <oltoko@gmail.com>"]
 license = "MIT"
 readme = "README.md"
