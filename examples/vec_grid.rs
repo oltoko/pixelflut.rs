@@ -35,7 +35,7 @@ impl Grid for VecGrid {
         self.size.clone()
     }
 
-    fn draw(&mut self, px: Pixel) {
+    fn draw(&mut self, px: &Pixel) {
         let x = px.coordinate().x();
         let y = px.coordinate().y();
 

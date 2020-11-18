@@ -1,16 +1,21 @@
 use core::fmt;
 use std::fmt::Formatter;
 use std::net::IpAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::time::Instant;
 
 use custom_error::custom_error;
 use log::{error, info, warn};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::{mpsc, RwLock};
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::task;
 
 use crate::grid::{Grid, Size};
 use crate::pixel::Pixel;
+
+const PIXEL_BUFFER: usize = 1024;
 
 const HELP: &str = "\
 HELP Pixelflut Commands:\n\
@@ -33,22 +38,22 @@ custom_error! { ServerError
 /// let server = Server::new("0.0.0.0".parse()?, 2342, grid);
 /// server.start().await
 /// ```
-pub struct Server<G: Grid + std::marker::Send> {
+pub struct Server<G: Grid + std::marker::Send + std::marker::Sync> {
     interface: IpAddr,
     port: u16,
-    grid: Arc<Mutex<G>>,
+    grid: Arc<RwLock<G>>,
 }
 
 impl<G> Server<G>
     where
-        G: 'static + Grid + std::marker::Send,
+        G: 'static + Grid + std::marker::Send + std::marker::Sync,
 {
     /// Creates a new Server for the given interface, port and Grid.
     pub fn new(interface: IpAddr, port: u16, grid: G) -> Server<G> {
         Server {
             interface,
             port,
-            grid: Arc::new(Mutex::new(grid)),
+            grid: Arc::new(RwLock::new(grid)),
         }
     }
 
@@ -56,6 +61,13 @@ impl<G> Server<G>
     pub async fn start(self) -> Result<(), Box<dyn std::error::Error>> {
         // Bind the listener to the address
         let listener = TcpListener::bind((self.interface, self.port)).await?;
+        let (tx, rx) = mpsc::channel(PIXEL_BUFFER);
+
+        // Start a dedicated task to draw the pixels in bulks to the grid
+        let write_grid = Arc::clone(&self.grid);
+        task::spawn(async move {
+            draw_pixels(rx, write_grid).await;
+        });
 
         info!("Server is ready and listening to {}:{}", self.interface, self.port);
         loop {
@@ -64,8 +76,9 @@ impl<G> Server<G>
                 Ok((mut socket, addr)) => {
                     info!("New connection from {}", addr);
                     let grid = Arc::clone(&self.grid);
+                    let tx = tx.clone();
                     task::spawn(async move {
-                        match process(&mut socket, grid).await {
+                        match process(&mut socket, grid, tx).await {
                             Ok(()) => info!("{} disconnects", addr),
                             Err(e) => warn!("{} disconnects because of: {}", addr, e),
                         }
@@ -77,9 +90,28 @@ impl<G> Server<G>
     }
 }
 
+async fn draw_pixels<G: Grid>(mut rx: Receiver<Pixel>, grid: Arc<RwLock<G>>) {
+    let buf: &mut Vec<Pixel> = &mut vec!();
+    let mut time = Instant::now();
+
+    loop {
+        if let Some(px) = rx.recv().await {
+            buf.push(px);
+        }
+
+        if !buf.is_empty() && (buf.len() > PIXEL_BUFFER || time.elapsed().as_micros() > 900) {
+            let mut grid = grid.write().await;
+            buf.iter().for_each(|px| grid.draw(px));
+            buf.clear();
+            time = Instant::now();
+        }
+    }
+}
+
 async fn process<G: Grid>(
     socket: &mut TcpStream,
-    grid: Arc<Mutex<G>>,
+    grid: Arc<RwLock<G>>,
+    tx: Sender<Pixel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (rd, mut wr) = io::split(socket);
     let reader = BufReader::new(rd);
@@ -94,7 +126,7 @@ async fn process<G: Grid>(
                     2 => {
                         let pixel: Option<Pixel>;
                         {
-                            let grid = grid.lock().unwrap();
+                            let grid = grid.read().await;
                             pixel = grid.fetch(line.parse()?);
                         }
                         if pixel.is_some() {
@@ -103,8 +135,7 @@ async fn process<G: Grid>(
                     }
                     // PX <x> <y> <RRGGBB[AA]>
                     3 => {
-                        let mut grid = grid.lock().unwrap();
-                        grid.draw(line.parse()?)
+                        tx.send(line.parse()?).await?;
                     }
                     _ => return Err(Box::new(ServerError::UnknownCommand)),
                 }
@@ -112,7 +143,7 @@ async fn process<G: Grid>(
             Some("SIZE") => {
                 let size;
                 {
-                    let grid = grid.lock().unwrap();
+                    let grid = grid.read().await;
                     size = grid.size().to_string();
                 }
                 wr.write(size.as_bytes()).await?;

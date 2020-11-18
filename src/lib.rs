@@ -25,7 +25,7 @@
 ///         self.size.clone()
 ///     }
 ///
-///     fn draw(&mut self, px: Pixel) {
+///     fn draw(&mut self, px: &Pixel) {
 ///         println!("{}", px);
 ///     }
 ///
@@ -65,7 +65,7 @@
 /// #         self.size.clone()
 /// #     }
 ///
-/// #     fn draw(&mut self, px: Pixel) {
+/// #     fn draw(&mut self, px: &Pixel) {
 /// #         println!("{}", px);
 /// #     }
 ///
