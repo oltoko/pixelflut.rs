@@ -130,7 +130,8 @@ async fn process<G: Grid>(
                             pixel = grid.fetch(line.parse()?);
                         }
                         if pixel.is_some() {
-                            wr.write(pixel.unwrap().to_string().as_bytes()).await?;
+                            let pixel = format!("{}\n", pixel.unwrap());
+                            wr.write(pixel.as_bytes()).await?;
                         }
                     }
                     // PX <x> <y> <RRGGBB[AA]>
