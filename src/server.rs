@@ -173,6 +173,6 @@ mod tests {
     #[test]
     fn display_size() {
         let size = Size::new(1024, 768);
-        assert_eq!(size.to_string(), "SIZE 1024 768\n");
+        assert_eq!(size.to_string(), "SIZE 1024 768");
     }
 }
