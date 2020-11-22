@@ -22,7 +22,7 @@ HELP Pixelflut Commands:\n\
 HELP - PX <x> <y> <RRGGBB[AA]>\n\
 HELP - PX <x> <y>   >>  PX <x> <y> <RRGGBB>\n\
 HELP - SIZE         >>  SIZE <width> <height>\n\
-HELP - HELP         >>  HELP ...\n";
+HELP - HELP         >>  HELP ...";
 
 custom_error! { ServerError
     UnknownCommand = "Unknown command send!"
@@ -145,11 +145,14 @@ async fn process<G: Grid>(
                 let size;
                 {
                     let grid = grid.read().await;
-                    size = grid.size().to_string();
+                    size = format!("{}\n", grid.size());
                 }
                 wr.write(size.as_bytes()).await?;
             }
-            Some("HELP") => { wr.write(HELP.as_bytes()).await?; }
+            Some("HELP") => {
+                let help = format!("{}\n", HELP);
+                wr.write(help.as_bytes()).await?;
+            }
             _ => return Err(Box::new(ServerError::UnknownCommand)),
         }
     }
@@ -159,7 +162,7 @@ async fn process<G: Grid>(
 
 impl fmt::Display for Size {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        writeln!(f, "SIZE {} {}", self.x(), self.y())
+        write!(f, "SIZE {} {}", self.x(), self.y())
     }
 }
 
